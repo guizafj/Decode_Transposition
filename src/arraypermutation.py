@@ -1,47 +1,28 @@
-from itertools import product
+"""
+arraypermutation.py
+Genera todas las permutaciones posibles de una lista de índices.
+"""
 
-class ArrayPermutation:
-
-    @staticmethod
-    def create_permutation_list_of_array_with_rep_items(input_array):
-        """
-        Generate permutations with repetition, ensuring the input array is sorted first.
-        """
-        # Ordenar el arreglo de entrada para garantizar un orden consistente
-        input_array.sort()
-
-        """"
-        Generate permutations with repetition.
-        """
-        from itertools import product
-        return [list(p) for p in product(input_array, repeat=len(input_array))]
+from itertools import permutations
 
 
-    @staticmethod
-    def create_permutation_list_of_array_without_rep_items(input_array):
-        permutation_lists = []
-        ArrayPermutation.permute_helper(input_array, permutation_lists, 0)  # Generate permutations without repetition recursively.
-        return permutation_lists
+def get_all_permutations(n: int) -> list[list[int]]:
+    """
+    Genera todas las permutaciones de los índices [0, 1, ..., n-1].
 
-    @staticmethod
-    def permute_helper(input_array, permutation_lists, current_index):
-        """
-        Generate permutations without repetition recursively.
-        """
-        if current_index == len(input_array):
-            permutation_lists.append(input_array[:])
-            return
+    Args:
+        n: Longitud de la clave (número de columnas).
 
-        for i in range(current_index, len(input_array)):
-            input_array[current_index], input_array[i] = input_array[i], input_array[current_index]
-            ArrayPermutation.permute_helper(input_array, permutation_lists, current_index + 1)
-            input_array[current_index], input_array[i] = input_array[i], input_array[current_index]
+    Returns:
+        Lista de listas, donde cada sublista es una permutación de índices.
+    """
+    indices = list(range(n))
+    return [list(p) for p in permutations(indices)]
 
-    @staticmethod
-    def permute_rep_iterative(input_array, permutation_lists):
-        """
-        Generate permutations with repetition iteratively.
-        """
-        from itertools import product
-        for p in product(input_array, repeat=len(input_array)):
-            permutation_lists.append(list(p))
+
+if __name__ == "__main__":
+    # Prueba rápida
+    perms = get_all_permutations(3)
+    print(f"Permutaciones para n=3: {len(perms)}")
+    for p in perms:
+        print(p)

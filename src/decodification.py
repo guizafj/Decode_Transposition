@@ -1,103 +1,147 @@
-class Decodification:
+"""
+decodification.py
+Lógica central para cifrar y descifrar por transposición de columnas.
+"""
 
-    @staticmethod
-    def print_table(column_array, key):
-        result = ""
-        # Iterates over each row of the table.
-        for column_array_row in column_array:
-            # Traverses the columns in the order defined by the key.
-            for i in range(len(column_array_row)):
-                result += column_array_row[key[i]]  # Adds the corresponding character to the result.
-        return result
+import math
+from myarrays import build_matrix, read_by_columns, read_by_rows
 
-    @staticmethod
-    def decode(permutation, overflows, text):
-        if not text:
-            raise ValueError("The encrypted text cannot be empty.")
 
-        # Calculate rows needed
-        rows = Decodification.rows_calculator(text, len(permutation))
+def encrypt(plaintext: str, key: list[int]) -> str:
+    """
+    Cifra un texto usando transposición de columnas.
 
-        # Create table with exact size needed
-        table = [[''] * len(permutation) for _ in range(rows)]
+    El texto se escribe en una matriz de `len(key)` columnas (rellenando por
+    filas) y luego se leen las columnas en el orden dado por `key`.
 
-        # Fill table
-        text_pointer = 0
-        for i in range(len(permutation)):
-            for j in range(rows):
-                if overflows[i] == 0 and j == rows - 1:
-                    table[j][i] = '-'
-                elif text_pointer < len(text):
-                    table[j][i] = text[text_pointer]
-                    text_pointer += 1
-                else:
-                    table[j][i] = '-'
+    Args:
+        plaintext: Texto original (se convierte a mayúsculas, sin espacios).
+        key: Permutación de índices 0..n-1 (ej: [2, 0, 1]).
 
-        return Decodification.print_table(table, permutation)
+    Returns:
+        Texto cifrado.
 
-    @staticmethod
-    def rows_calculator(text, columns):
-        # Calculate rows needed, rounding up
-        rows = (len(text) + columns - 1) // columns
-        
-        # Validate that we won't need more characters than available
-        required_length = rows * columns
-        if required_length > len(text) + columns:
-            raise ValueError(f"Invalid column size {columns} for text length {len(text)}")
-        
-        return rows
+    Ejemplo:
+        encrypt("HOLAMUNDO", [2, 0, 1])
+        Tabla:
+            Col 0 1 2
+                H O L
+                A M U
+                N D O
+        Lectura en orden [2,0,1] → col2 + col0 + col1 = LUO + HAN + OMD
+        → "LUOHANOMDT" (relleno con X si hace falta)
+    """
+    text = plaintext.upper().replace(" ", "")
+    num_cols = len(key)
+    matrix = build_matrix(text, num_cols)
+    return read_by_columns(matrix, key)
 
-    @staticmethod
-    def decode_with_brute_force():
-        return None
 
-    @staticmethod
-    def key_transformation(key):
-        transformation = []
-        result = []
-        key_to_upper = key.upper()  # Converts the key to uppercase.
+def decrypt(ciphertext: str, key: list[int]) -> str:
+    """
+    Descifra un texto cifrado por transposición de columnas conociendo la clave.
 
-        # Converts each character of the key into a numeric value based on its position in the alphabet.
-        for char in key_to_upper:
-            transformation.append(ord(char) - 64)  # 'A' = 1, 'B' = 2, etc.
+    El proceso invierte el cifrado:
+    1. Calcula cuántas filas tiene la matriz.
+    2. Determina la longitud de cada columna (puede variar en la última fila).
+    3. Reconstruye la matriz colocando el texto cifrado columna a columna
+        según la clave inversa.
+    4. Lee la matriz por filas para obtener el texto plano.
 
-        result = transformation.copy()  # Clones the transformation list.
+    Args:
+        ciphertext: Texto cifrado.
+        key: Permutación de índices 0..n-1 (misma que se usó para cifrar).
 
-        # Calculates the order of the columns based on the values of the key.
-        for i in range(len(key)):
-            position = Decodification.max_value(transformation)  # Finds the position of the maximum value.
-            transformation[position] = 0  # Marks the value as processed.
-            result[position] = len(key) - (i + 1)  # Assigns the inverse order.
-        return result
+    Returns:
+        Texto descifrado (puede tener 'X' de relleno al final).
+    """
+    num_cols = len(key)
+    num_rows = math.ceil(len(ciphertext) / num_cols)
+    total_cells = num_rows * num_cols
+    # Cuántas celdas de la última fila están "vacías" (fueron relleno)
+    num_short_cols = total_cells - len(ciphertext)
 
-    @staticmethod
-    def max_value(transformation):
-        pointer = 0
-        # Iterates over the list to find the index of the maximum value.
-        for i in range(len(transformation) - 1, 0, -1):
-            if transformation[i] > transformation[pointer]:
-                pointer = i
-        return pointer
+    # Calculamos la longitud de cada columna en orden original (0..n-1)
+    col_lengths = []
+    for col in range(num_cols):
+        # Las columnas cuyo índice original >= (num_cols - num_short_cols)
+        # tienen una fila menos si aparecen al final de la clave
+        # Más preciso: identificamos qué posición ocupa cada col en la clave
+        position_in_key = key.index(col)
+        if position_in_key >= (num_cols - num_short_cols):
+            col_lengths.append(num_rows - 1)
+        else:
+            col_lengths.append(num_rows)
 
-    @staticmethod
-    def decode_with_brute_force(cipher_text):
-        max_columns = len(cipher_text)
-        print(f"Max columns: {max_columns}")
-        # Tests all possible column sizes
-        for column_size in range(1, max_columns + 1):
-            rows = Decodification.rows_calculator(cipher_text, column_size)
-            print(f"Trying column size {column_size} - {rows} rows")
-            overflows = [0] * column_size  # Resets the overflows for the new column size
+    # Construimos las columnas a partir del ciphertext
+    columns = {}
+    index = 0
+    for key_pos, col in enumerate(key):
+        length = col_lengths[col]
+        columns[col] = list(ciphertext[index:index + length])
+        index += length
 
-            # Adjusts the last row's overflow based on the remaining characters
-            if len(cipher_text) % column_size != 0:
-                overflows[-1] = len(cipher_text) % column_size
+    # Leemos por filas reconstruyendo el mensaje original
+    result = []
+    for row in range(num_rows):
+        for col in range(num_cols):
+            if row < len(columns[col]):
+                result.append(columns[col][row])
 
-            # Skips the decoding if the calculated rows exceed the available characters
-            if rows * column_size > len(cipher_text) + column_size:
-                print(f"Skipping column size {column_size} - would require too many characters")
-                continue
+    return ''.join(result)
 
-            permutation = Decodification.key_transformation(''.join([chr(65 + i) for i in range(column_size)]))
-            decoded_text = Decodification.decode(permutation, overflows, cipher_text)
-            print(f"Decoded text with column size {column_size}: {decoded_text}")
+
+def try_all_keys(ciphertext: str, key_length: int, keyword: str) -> list[dict]:
+    """
+    Prueba todas las permutaciones de clave para una longitud dada y
+    devuelve las soluciones que contienen la palabra clave.
+
+    Args:
+        ciphertext: Texto cifrado.
+        key_length: Longitud de la clave a probar.
+        keyword: Palabra que debe aparecer en el texto descifrado.
+
+    Returns:
+        Lista de diccionarios con 'key' y 'plaintext' de cada solución válida.
+    """
+    from arraypermutation import get_all_permutations
+
+    solutions = []
+    keyword_upper = keyword.upper()
+    permutations_list = get_all_permutations(key_length)
+
+    for key in permutations_list:
+        plaintext = decrypt(ciphertext, key)
+        if keyword_upper in plaintext:
+            solutions.append({
+                'key': key,
+                'plaintext': plaintext
+            })
+
+    return solutions
+
+
+def brute_force(ciphertext: str, keyword: str, max_key_length: int = 8) -> list[dict]:
+    """
+    Ataque de fuerza bruta probando todas las longitudes de clave posibles.
+
+    ADVERTENCIA: Para key_length > 8 el número de permutaciones (8! = 40320)
+    crece factorialmente. Con key_length=10 son 3.6 millones de intentos.
+
+    Args:
+        ciphertext: Texto cifrado.
+        keyword: Palabra probable en el texto original.
+        max_key_length: Longitud máxima de clave a probar (por defecto 8).
+
+    Returns:
+        Lista de todas las soluciones encontradas con su longitud de clave.
+    """
+    all_solutions = []
+    for length in range(2, max_key_length + 1):
+        solutions = try_all_keys(ciphertext, length, keyword)
+        for sol in solutions:
+            sol['key_length'] = length
+            all_solutions.append(sol)
+        if solutions:
+            print(f"  ✓ Encontradas {len(solutions)} soluciones con clave de longitud {length}")
+    return all_solutions
