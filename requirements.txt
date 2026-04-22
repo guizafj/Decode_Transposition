@@ -26,7 +26,7 @@ keyring==25.7.0
 mtrand==0.1
 mypy==1.19.1
 pexpect==4.9.0
-Pillow==12.1.1
+Pillow==12.2.0
 protobuf==7.34.0
 psutil==7.0.0
 PyInstaller==6.19.0
