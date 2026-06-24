@@ -41,7 +41,7 @@ Sphinx==9.1.0
 thread==2.0.6
 threadpoolctl==3.6.0
 trove_classifiers==2026.1.14.14
-Twisted==25.5.0
+Twisted==26.4.0rc2
 typing_extensions==4.15.0
 urllib3_secure_extra==0.1.0
 xmlrpclib==1.0.1
