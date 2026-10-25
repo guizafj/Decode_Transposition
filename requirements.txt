@@ -1,7 +1,7 @@
 argcomplete==3.6.3
 attr==0.3.2
 brotli==1.2.0
-brotlicffi==1.2.0.0
+brotlicffi==1.2.1.0
 chardet==6.0.0.post1
 checks==0.2
 colorama==0.4.6
